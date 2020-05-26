@@ -1,14 +1,16 @@
 version: '3'
 services:
-  mongodb:
-    image: 'mongo:4.2'
-    container_name: 'mongodb'
-    environment:
-      - MONGO_INITDB_DATABASE=uncached-data
-      - MONGO_INITDB_ROOT_USERNAME=iamcreator
-      - MONGO_INITDB_ROOT_PASSWORD=mongopass
-    volumes:
-      - ./db-init.js:/docker-entrypoint-initdb.d/db-init.js:ro
-      - ./mongo-volume:/data/db
+  web:
+    image: mongo-server
+    build: .
+    command: 'node src/main.js'
     ports:
-      - '27017-27019:27017-27019'
+      - '3000:3000'
+    depends_on:
+      - 'mongo'
+  mongo:
+    image: 'mongo:4.2'
+    ports:
+      - '27017:27017'
+    volumes:
+      - ./mongo-volume:/usr/src/app
