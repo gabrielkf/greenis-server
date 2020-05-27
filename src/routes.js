@@ -55,7 +55,52 @@ routes.get('/get/:key', (req, res) => {
     return res.status(200).send(`"${cache[key]}"`);
   }
 
-  return res.status(204).send('(nil)');
+  return res.status(404).format({
+    'text/plain': function () {
+      res.send('(nil)');
+    },
+  });
+});
+
+routes.get('/dbsize', (req, res) => {
+  return res
+    .status(200)
+    .send(String(Object.keys(cache).length));
+});
+
+routes.post('/zadd/:key/:score/:value', (req, res) => {
+  const { key, score, value } = req.params;
+
+  if (cache[key]) {
+    cache[key] = [{ score, value }];
+    res.status(201).send('(integer) 1');
+  }
+
+  // todo: sorted insertion
+  cache[key].push({ score, value });
+
+  return res.status(201).send('(integer) 1');
+});
+
+// UPDATE ---------------------------------------------||
+routes.put('/incr/:key', (req, res) => {
+  const { key } = req.params;
+
+  if (!cache[key]) {
+    cache[key] = 1;
+    return res.status(201).send(`(integer) ${cache[key]}`);
+  }
+
+  if (isNaN(cache[key])) {
+    return res
+      .status(405)
+      .send(
+        `(error) ERR value is not an integer or out of range`
+      );
+  }
+
+  cache[key] += 1;
+  return res.status(200).send(`(integer) ${cache[key]}`);
 });
 
 module.exports = routes;

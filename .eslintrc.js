@@ -19,5 +19,6 @@ module.exports = {
     'prettier/prettier': 1,
     'no-console': 0,
     'no-restricted-globals': 0,
+    'func-names': 0,
   },
 };
