@@ -8,6 +8,7 @@ module.exports = {
   globals: {
     Atomics: 'readonly',
     SharedArrayBuffer: 'readonly',
+    isNaN: 'readonly',
   },
   parser: 'babel-eslint',
   parserOptions: {
@@ -16,5 +17,7 @@ module.exports = {
   plugins: ['prettier'],
   rules: {
     'prettier/prettier': 1,
+    'no-console': 0,
+    'no-restricted-globals': 0,
   },
 };

@@ -1,14 +1,14 @@
 {
-  "name": "greenis",
+  "name": "greenis-server",
   "version": "1.0.0",
   "main": "src/main.js",
   "license": "MIT",
   "scripts": {
-    "dev": "nodemon"
+    "dev": "nodemon src/main.js",
+    "start": "node src/main.js"
   },
   "dependencies": {
-    "express": "^4.17.1",
-    "mongoose": "^5.9.16"
+    "express": "^4.17.1"
   },
   "devDependencies": {
     "babel-eslint": "^10.1.0",

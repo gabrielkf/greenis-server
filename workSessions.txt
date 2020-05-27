@@ -1,8 +1,17 @@
 This is an aproximate register of the work sessions on this project,
 
 Session 1
-started: 25/05/2020 23h00
-finished: 26/05/2020 00h30
+start: 25/05/2020 23h00
+end: 26/05/2020 00h30
 
 Session 2
-started: 26/05/2020 9h15
+start: 26/05/2020 9h15
+end: 26/05/2020 12h00
+
+Session 3
+start: 26/05/2020 17h00
+end: 26/05/2020 18h30
+
+Session 4
+start: 26/05/2020 21h20
+end:

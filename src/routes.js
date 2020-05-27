@@ -1,37 +1,61 @@
-const { Router } = require('express');
-const mongoose = require('mongoose');
+/*
+ * The commands are defined in the route
+ * The arguments are defined in the route parameters
+ *
+ * The requests are defined by the command nature (CRUD)
+ * POST for creations: SET, ZADD
+ * GET for reads: GET, ZCARD, ZRANK, DBSIZE
+ * POST for updates: INCR
+ * DELETE for deletions: DEL
+ */
 
-mongoose
-  .connect('mongo://mongo:27017/sample', {
-    useNewUrlParser: true,
-    useFindAndModify: true,
-    useUnifiedTopology: true,
-  })
-  .then(() => console.log('MongoDB Connected'))
-  .catch(err => console.log(err));
+const routes = require('express').Router();
 
-const Sample = require('./database/Schemas/sampleData');
+//* object for storing values
+const cache = {};
 
-const routes = new Router();
-
+// ? test route (can be removed)
 routes.get('/', (req, res) => {
-  res.send('working alright');
+  res.send('Greenis up and running');
 });
 
-routes.post('/db', async (req, res) => {
-  const { id, sample } = req.body;
+// ? List all values
+routes.get('/all', (req, res) => {
+  res.json(cache);
+});
 
-  const sentData = new Sample({
-    id,
-    sample,
-  });
+// CREATE ----------------------------------------------||
+routes.post('/set/:key/:value', (req, res) => {
+  const { key, value } = req.params;
+  cache[key] = String(value);
 
-  sentData
-    .save(sample)
-    .then(savedData => res.send(savedData))
-    .catch(err => res.send(err));
+  return res.status(201).send(`"OK"`);
+});
 
-  return res.json(sentData);
+routes.post('/set/:key/:value/:time', (req, res) => {
+  const { key, value, time } = req.params;
+
+  if (isNaN(time)) {
+    return res
+      .status(400)
+      .send('EX must be followed by a number');
+  }
+
+  cache[String(key)] = String(value);
+  setTimeout(() => delete cache[key], time * 1000);
+
+  return res.status(201).send(`"OK"`);
+});
+
+// READ -----------------------------------------------||
+routes.get('/get/:key', (req, res) => {
+  const { key } = req.params;
+
+  if (cache[key]) {
+    return res.status(200).send(`"${cache[key]}"`);
+  }
+
+  return res.status(204).send('(nil)');
 });
 
 module.exports = routes;
