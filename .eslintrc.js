@@ -20,5 +20,6 @@ module.exports = {
     'no-console': 0,
     'no-restricted-globals': 0,
     'func-names': 0,
+    'no-unused-vars': 1,
   },
 };
