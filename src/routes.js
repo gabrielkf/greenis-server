@@ -14,9 +14,33 @@ const routes = require('express').Router();
 const PORT = 6389;
 
 //* object for storing values
-const cache = {};
+const cache = {
+  chave: [
+    {
+      score: '11',
+      member: 'minxo',
+    },
+    {
+      score: '12',
+      member: 'catorro',
+    },
+    {
+      score: '13',
+      member: 'capeta',
+    },
+    {
+      score: '14',
+      member: 'caixa',
+    },
+    {
+      score: '21',
+      member: 'cerva',
+    },
+  ],
+};
 
-// ? test route (can be removed)
+// ! TEST routes (can be removed)
+// ? handshake route
 routes.get('/', (req, res) => {
   res.send(`Greenis-server listening on port ${PORT}`);
 });
@@ -27,7 +51,7 @@ routes.get('/all', (req, res) => {
 });
 
 // CREATE ----------------------------------------------||
-// SET key value
+//* SET key value
 routes.post('/set/:key', (req, res) => {
   const { key } = req.params;
   const { value } = req.body;
@@ -37,7 +61,7 @@ routes.post('/set/:key', (req, res) => {
   return res.status(201).send(`"OK"`);
 });
 
-// SET key value EX seconds
+//* SET key value EX seconds
 routes.post('/set/EX/:key', (req, res) => {
   const { key } = req.params;
   const { value, seconds } = req.body;
@@ -54,7 +78,7 @@ routes.post('/set/EX/:key', (req, res) => {
   return res.status(201).send(`"OK"`);
 });
 
-// ZADD key score member
+//* ZADD key score member
 routes.post('/zadd/:key', (req, res) => {
   const { key } = req.params;
   const { score, member } = req.body;
@@ -66,46 +90,48 @@ routes.post('/zadd/:key', (req, res) => {
       .send('(error) ERR value is not a valid float');
   }
 
-  if (!cache[key]) {
-    cache[key] = [{ score, member }];
+  const newMember = { score, member };
+  const oldZ = cache[key];
+  // check if Z set exists and key is not assigned
+  if (oldZ === undefined) {
+    cache[key] = [newMember];
     return res.status(201).send('(integer) 1');
   }
-
-  // search for first item with same score
-  const low = cache[key].findIndex(
-    item => item.score >= score
-  );
-  if (low === -1) {
-    // if no higher score is found, adds as last
-    cache[key].push({ score, member });
-    return res.status(201).send('(integer) 1');
+  if (typeof oldZ !== 'object') {
+    return res
+      .status(400)
+      .send(
+        '(error) WRONGTYPE Operation against a key holding the wrong kind of value'
+      );
   }
 
-  // search for last item with same score
-  let high = low;
-  for (high; high < cache[key].length; high = +1) {
-    if (cache[key][high].score > score) {
-      break;
+  // runs through the set and adds to newZ[] in correct place
+  const newZ = [];
+  let inserted = false;
+  for (let i = 0; i < oldZ.length; i += 1) {
+    if (
+      (!inserted && score < oldZ[i].score) ||
+      (score === oldZ[i].score &&
+        member < oldZ[i].member &&
+        !inserted)
+    ) {
+      inserted = true;
+      newZ.push(newMember);
     }
+    newZ.push(oldZ[i]);
+  }
+  if (!inserted) {
+    newZ.push(newMember);
   }
 
-  const sameScore = cache[key].slice(low, high);
-  sameScore.push({ score, member });
-  sameScore.sort((a, b) => {
-    return a.member > b.member ? 1 : -1;
-  });
-
-  const newZ = cache[key].slice(0, low);
-  newZ.concat(sameScore);
-  newZ.concat(cache[key].slice(high, cache[key].length));
-
+  console.log(newZ);
   cache[key] = newZ;
 
   return res.status(201).send('(integer) 1');
 });
 
 // READ -----------------------------------------------||
-// GET key
+//* GET key
 routes.get('/get/:key', (req, res) => {
   const { key } = req.params;
 
@@ -120,7 +146,7 @@ routes.get('/get/:key', (req, res) => {
   });
 });
 
-// DBSIZE
+//* DBSIZE
 routes.get('/dbsize', (req, res) => {
   return res
     .status(200)
@@ -128,7 +154,7 @@ routes.get('/dbsize', (req, res) => {
 });
 
 // UPDATE ---------------------------------------------||
-// INCR
+//* INCR
 routes.put('/incr/:key', (req, res) => {
   const { key } = req.params;
 
