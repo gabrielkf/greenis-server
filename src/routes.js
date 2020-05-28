@@ -4,7 +4,7 @@
  *
  * The requests are defined by the command nature (CRUD)
  * POST for creations: SET, ZADD
- * GET for reads: GET, ZCARD, ZRANK, DBSIZE
+ * GET for reads: GET, ZCARD, ZRANK, ZRANGE, DBSIZE
  * POST for updates: INCR
  * DELETE for deletions: DEL
  */
@@ -153,8 +153,78 @@ routes.get('/dbsize', (req, res) => {
     .send(String(Object.keys(cache).length));
 });
 
+//* ZCARD key
+routes.get('/zcard/:key', (req, res) => {
+  const { key } = req.params;
+
+  if (!cache[key]) {
+    return res.status(404).send('(integer) 0');
+  }
+
+  if (typeof cache[key] !== 'object') {
+    return res
+      .status(400)
+      .send(
+        '(error) WRONGTYPE Operation against a key holding the wrong kind of value'
+      );
+  }
+
+  return res
+    .status(200)
+    .send(`(integer) ${cache[key].length}`);
+});
+
+//* ZRANK
+routes.get('/zrank/:key', (req, res) => {
+  const { key } = req.params;
+  const { member } = req.body;
+
+  if (typeof cache[key] !== 'object') {
+    return res
+      .status(400)
+      .send(
+        '(error) WRONGTYPE Operation against a key holding the wrong kind of value'
+      );
+  }
+
+  const memberIndex = cache[key].findIndex(
+    item => item.member === member
+  );
+
+  if (!cache[key] || memberIndex === -1) {
+    return res.status(404).format({
+      'text/plain': function () {
+        res.send('(nil)');
+      },
+    });
+  }
+
+  return res.status(200).send(`(integer) ${memberIndex}`);
+});
+
+//* ZRANGE key start stop
+routes.get('/zrange/:key/:start/:stop', (req, res) => {
+  const { key, start, stop } = req.params;
+
+  if (!cache[key]) {
+    return res.status(404).send('(empty array)');
+  }
+
+  if (typeof cache[key] !== 'object') {
+    return res
+      .status(400)
+      .send(
+        '(error) WRONGTYPE Operation against a key holding the wrong kind of value'
+      );
+  }
+
+  const range = cache[key].slice(start, stop);
+
+  return res.status(200).send(range);
+});
+
 // UPDATE ---------------------------------------------||
-//* INCR
+//* INCR key
 routes.put('/incr/:key', (req, res) => {
   const { key } = req.params;
 
@@ -173,6 +243,19 @@ routes.put('/incr/:key', (req, res) => {
 
   cache[key] += 1;
   return res.status(200).send(`(integer) ${cache[key]}`);
+});
+
+// DELETE ---------------------------------------------||
+routes.delete('/del/:key', (req, res) => {
+  const { key } = req.params;
+
+  if (!cache[key]) {
+    return res.status(404).send('(integer) 0');
+  }
+
+  delete cache[key];
+
+  return res.status(404).send('(integer) 1');
 });
 
 module.exports = { routes, PORT };
