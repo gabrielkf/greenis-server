@@ -11,26 +11,28 @@
 function cacheFactory() {
   // storage object
   this.cache = {
-    chave: [
+    sampleWord: 'sample',
+    sampleNumber: '3',
+    sampleZ: [
       {
         score: '11',
-        member: 'minxo',
+        member: '0',
       },
       {
         score: '12',
-        member: 'catorro',
+        member: '1',
       },
       {
         score: '13',
-        member: 'capeta',
+        member: '2',
       },
       {
         score: '14',
-        member: 'caixa',
+        member: '3',
       },
       {
         score: '21',
-        member: 'cerva',
+        member: '4',
       },
     ],
   };
@@ -91,7 +93,7 @@ function cacheFactory() {
       }
     }
 
-    return [counter, 200];
+    return [String(counter), 200];
   };
 
   const zcard = key => {
@@ -118,19 +120,19 @@ function cacheFactory() {
     }
 
     const memberIndex = this.cache[key].findIndex(
-      item => item.member === member
+      item => item.member === String(member)
     );
 
     if (!this.cache[key] || memberIndex === -1) {
-      return ['(nil)', 404];
+      return ['(nil)', String(404)];
     }
 
-    return [memberIndex, 404];
+    return [memberIndex, String(200)];
   };
 
   const zrange = (key, start, stop) => {
     if (isNaN(start) || isNaN(stop)) {
-      return ['ERR range argument is not a number', 400];
+      return ['ERR Range argument is not a number', 400];
     }
 
     if (!this.cache[key]) {
@@ -144,12 +146,18 @@ function cacheFactory() {
       ];
     }
 
-    let end;
-    if (+stop < 0) {
-      end = this.cache[key].length + 1 + stop;
-    }
+    // get members
+    const members = this.cache[key].map(
+      item => item.member
+    );
 
-    const range = this.cache[key].slice(start, end);
+    // adapts indexes to make .slice bahave as zrange
+    const first =
+      start < 0 ? members.length + +start : +start;
+    const last =
+      stop < 0 ? members.length + +stop + 1 : +stop + 1;
+
+    const range = members.slice(first, last);
 
     return [range, 200];
   };
@@ -158,10 +166,10 @@ function cacheFactory() {
   // SET key value [EX seconds]
   const set = (key, value, EX, seconds) => {
     if (EX && !seconds) {
-      return ['ERR wrong arguments', 400];
+      return ['ERR Invalid arguments', 400];
     }
     if (seconds && isNaN(seconds)) {
-      return ['ERR seconds is not a valid float', 400];
+      return ['ERR Seconds is not a valid float', 400];
     }
 
     this.cache[key] = value;
@@ -178,12 +186,12 @@ function cacheFactory() {
 
   const zadd = (key, score, member) => {
     if (!score || !member) {
-      return ['ERR wrong number of arguments'];
+      return ['ERR Invalid arguments'];
     }
 
     // returns error if score is not a number
     if (isNaN(score)) {
-      return ['ERR value is not a valid float', 400];
+      return ['ERR Value is not a valid float', 400];
     }
 
     const newMember = {
@@ -233,6 +241,13 @@ function cacheFactory() {
       return ['1', 201];
     }
 
+    if (typeof this.cache[key] === 'object') {
+      return [
+        'WRONGTYPE Operation against a key holding the wrong kind of value',
+        400,
+      ];
+    }
+
     if (isNaN(this.cache[key])) {
       return [
         'ERR value is not an integer or out of range',
@@ -240,9 +255,10 @@ function cacheFactory() {
       ];
     }
 
-    this.cache[key] += 1;
+    const withIncrement = Number(this.cache[key]) + 1;
+    this.cache[key] = withIncrement;
 
-    return [this.cache[key], 200];
+    return [String(this.cache[key]), 200];
   };
 
   //* DELETE
