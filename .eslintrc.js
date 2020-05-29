@@ -21,5 +21,6 @@ module.exports = {
     'no-restricted-globals': 0,
     'func-names': 0,
     'no-unused-vars': 1,
+    'consistent-return': 0,
   },
 };

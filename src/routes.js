@@ -2,176 +2,105 @@
  * The commands are defined in the route
  * The arguments are defined in the route parameters
  *
- * The requests are defined by the command nature (CRUD)
- * POST for creations: SET, ZADD
- * GET for reads: GET, ZCARD, ZRANK, ZRANGE, DBSIZE
- * POST for updates: INCR
- * DELETE for deletions: DEL
+ * With the exception of DEL, all commands are either
+ * PUT or GET requests:
+ * - PUT for insertions of updates: SET, INCR, ZADD
+ * - GET for reads: ALL, PING, GET, ZCARD, ZRANK, ZRANGE, DBSIZE
+ * - DELETE for  DEL
  */
 
 const routes = require('express').Router();
+const cache = require('./cache');
 
-const PORT = 6389;
+//* exposed port
+const PORT = 8080;
 
-//* object for storing values
-const cache = {
-  chave: [
-    {
-      score: '11',
-      member: 'minxo',
-    },
-    {
-      score: '12',
-      member: 'catorro',
-    },
-    {
-      score: '13',
-      member: 'capeta',
-    },
-    {
-      score: '14',
-      member: 'caixa',
-    },
-    {
-      score: '21',
-      member: 'cerva',
-    },
-  ],
-};
-
-// ! TEST routes (can be removed)
-// ? handshake route
-routes.get('/', (req, res) => {
-  res.send(`Greenis-server listening on port ${PORT}`);
-});
-
-// ? List all values
-routes.get('/all', (req, res) => {
-  res.json(cache);
-});
-
-// CREATE ----------------------------------------------||
-//* SET key value
-routes.post('/set/:key', (req, res) => {
-  const { key } = req.params;
-  const { value } = req.body;
-
-  cache[key] = String(value);
-
-  return res.status(201).send(`"OK"`);
-});
-
-//* SET key value EX seconds
-routes.post('/set/EX/:key', (req, res) => {
-  const { key } = req.params;
-  const { value, seconds } = req.body;
-
-  if (isNaN(seconds)) {
-    return res
-      .status(400)
-      .send('EX must be followed by a number');
+//* GLOBAL MIDDLEWARE
+// checks if command is in query parameters
+routes.use('/', (req, res, next) => {
+  if (!req.query.length) {
+    return next();
   }
 
-  cache[String(key)] = String(value);
-  setTimeout(() => delete cache[key], seconds * 1000);
+  const instruction = req.query.cmd.split(' ');
+  const cmd = String(instruction.slice(0, 1)).toLowerCase();
+  const args = instruction.slice(1);
 
-  return res.status(201).send(`"OK"`);
+  if (!cache.cmdIsValid(cmd)) {
+    return res.status(405).send('ERR invalid command');
+  }
+
+  const [response, status] = cache[cmd](...args);
+
+  return res.status(status).send(response);
+});
+
+// ADD -------------------------------------------------||
+//* SET key value [EX seconds]
+routes.put('/:key', (req, res) => {
+  const { key } = req.params;
+  const { value, EX, seconds } = req.body;
+
+  const [response, status] = cache.set(
+    key,
+    value,
+    EX,
+    seconds
+  );
+
+  return res.status(status).send(response);
 });
 
 //* ZADD key score member
-routes.post('/zadd/:key', (req, res) => {
+routes.put('/zadd/:key', (req, res) => {
   const { key } = req.params;
   const { score, member } = req.body;
 
-  // returns error if score is not a number
-  if (isNaN(score)) {
-    return res
-      .status(400)
-      .send('(error) ERR value is not a valid float');
-  }
+  const [response, status] = cache.zadd(key, score, member);
 
-  const newMember = { score, member };
-  const oldZ = cache[key];
-  // check if Z set exists and key is not assigned
-  if (oldZ === undefined) {
-    cache[key] = [newMember];
-    return res.status(201).send('(integer) 1');
-  }
-  if (typeof oldZ !== 'object') {
-    return res
-      .status(400)
-      .send(
-        '(error) WRONGTYPE Operation against a key holding the wrong kind of value'
-      );
-  }
-
-  // runs through the set and adds to newZ[] in correct place
-  const newZ = [];
-  let inserted = false;
-  for (let i = 0; i < oldZ.length; i += 1) {
-    if (
-      (!inserted && score < oldZ[i].score) ||
-      (score === oldZ[i].score &&
-        member < oldZ[i].member &&
-        !inserted)
-    ) {
-      inserted = true;
-      newZ.push(newMember);
-    }
-    newZ.push(oldZ[i]);
-  }
-  if (!inserted) {
-    newZ.push(newMember);
-  }
-
-  console.log(newZ);
-  cache[key] = newZ;
-
-  return res.status(201).send('(integer) 1');
+  return res.status(status).send(response);
 });
 
 // READ -----------------------------------------------||
+//* PING
+routes.get('/ping', (req, res) => {
+  const [response, status] = cache.ping();
+  return res.status(status).send(response);
+});
+
+//* ALL
+routes.get('/all', (req, res) => {
+  const [response, status] = cache.all();
+  return res.status(status).json(response);
+});
+
 //* GET key
 routes.get('/get/:key', (req, res) => {
   const { key } = req.params;
+  const { value } = req.body;
 
-  if (cache[key]) {
-    return res.status(200).send(`"${cache[key]}"`);
-  }
+  const [response, status] = cache.get(key, value);
 
-  return res.status(404).format({
+  return res.status(status).format({
     'text/plain': function () {
-      res.send('(nil)');
+      res.send(response);
     },
   });
 });
 
 //* DBSIZE
 routes.get('/dbsize', (req, res) => {
-  return res
-    .status(200)
-    .send(String(Object.keys(cache).length));
+  const [response, status] = cache.all();
+  return res.status(status).send(response);
 });
 
 //* ZCARD key
 routes.get('/zcard/:key', (req, res) => {
   const { key } = req.params;
 
-  if (!cache[key]) {
-    return res.status(404).send('(integer) 0');
-  }
+  const [response, status] = cache.zcard(key);
 
-  if (typeof cache[key] !== 'object') {
-    return res
-      .status(400)
-      .send(
-        '(error) WRONGTYPE Operation against a key holding the wrong kind of value'
-      );
-  }
-
-  return res
-    .status(200)
-    .send(`(integer) ${cache[key].length}`);
+  return res.status(status).send(response);
 });
 
 //* ZRANK
@@ -179,48 +108,23 @@ routes.get('/zrank/:key', (req, res) => {
   const { key } = req.params;
   const { member } = req.body;
 
-  if (typeof cache[key] !== 'object') {
-    return res
-      .status(400)
-      .send(
-        '(error) WRONGTYPE Operation against a key holding the wrong kind of value'
-      );
-  }
+  const [response, status] = cache.zrank(key, member);
 
-  const memberIndex = cache[key].findIndex(
-    item => item.member === member
-  );
-
-  if (!cache[key] || memberIndex === -1) {
-    return res.status(404).format({
-      'text/plain': function () {
-        res.send('(nil)');
-      },
-    });
-  }
-
-  return res.status(200).send(`(integer) ${memberIndex}`);
+  res.status(status).format({
+    'text/plain': function () {
+      res.send(response);
+    },
+  });
 });
 
 //* ZRANGE key start stop
-routes.get('/zrange/:key/:start/:stop', (req, res) => {
-  const { key, start, stop } = req.params;
+routes.get('/zrange/:key', (req, res) => {
+  const { key } = req.params;
+  const { start, stop } = req.body;
 
-  if (!cache[key]) {
-    return res.status(404).send('(empty array)');
-  }
+  const [response, status] = cache.zrange(key, start, stop);
 
-  if (typeof cache[key] !== 'object') {
-    return res
-      .status(400)
-      .send(
-        '(error) WRONGTYPE Operation against a key holding the wrong kind of value'
-      );
-  }
-
-  const range = cache[key].slice(start, stop);
-
-  return res.status(200).send(range);
+  return res.status(status).send(response);
 });
 
 // UPDATE ---------------------------------------------||
@@ -228,34 +132,18 @@ routes.get('/zrange/:key/:start/:stop', (req, res) => {
 routes.put('/incr/:key', (req, res) => {
   const { key } = req.params;
 
-  if (!cache[key]) {
-    cache[key] = 1;
-    return res.status(201).send(`(integer) ${cache[key]}`);
-  }
+  const [response, status] = cache.incr(key);
 
-  if (isNaN(cache[key])) {
-    return res
-      .status(405)
-      .send(
-        `(error) ERR value is not an integer or out of range`
-      );
-  }
-
-  cache[key] += 1;
-  return res.status(200).send(`(integer) ${cache[key]}`);
+  return res.status(status).send(response);
 });
 
 // DELETE ---------------------------------------------||
 routes.delete('/del/:key', (req, res) => {
   const { key } = req.params;
 
-  if (!cache[key]) {
-    return res.status(404).send('(integer) 0');
-  }
+  const [response, status] = cache.del(key);
 
-  delete cache[key];
-
-  return res.status(404).send('(integer) 1');
+  return res.status(status).send(response);
 });
 
 module.exports = { routes, PORT };
