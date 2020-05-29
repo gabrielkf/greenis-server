@@ -3,35 +3,46 @@ This is an aproximate register of the work sessions on this project,
 Session 1
 start: 25/05/2020 23h00
 end: 26/05/2020 00h30
+time: 1.5h
 
 Session 2
 start: 26/05/2020 9h15
 end: 26/05/2020 12h00
+time: 2.75h
 
 Session 3
 start: 26/05/2020 17h00
 end: 26/05/2020 18h30
+time: 1.5h
 
 Session 4
-start: 26/05/2020 21h20
+start: 26/05/2020 21h30
 end: 27/06/2020 00h30
+time: 3h
 
 Session 5
 start: 27/05/2020 11h30
 end: 27/05/2020 13h30
+time: 2h
 
 Session 6
 start: 27/05/2020 15h10
 end: 27/05/2020 20h00
+time: 5h
 
 Session 7
 start: 28/05/2020 10h20
 end: 28/05/2020 14h00
+time: 3.66h
 
 Session 8
 start: 28/05/2020 17h30
 end: 29/05/2020 02h00
+time: 8.5h
 
 Session 9
 start: 29/05/2020 10h15
-end: 29/05/2020
+end: 29/05/2020 17h00
+time: 6.75h
+
+TOTAL: 34.66h

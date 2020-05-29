@@ -10,32 +10,7 @@
 
 function cacheFactory() {
   // storage object
-  this.cache = {
-    sampleWord: 'sample',
-    sampleNumber: '3',
-    sampleZ: [
-      {
-        score: '11',
-        member: '0',
-      },
-      {
-        score: '12',
-        member: '1',
-      },
-      {
-        score: '13',
-        member: '2',
-      },
-      {
-        score: '14',
-        member: '3',
-      },
-      {
-        score: '21',
-        member: '4',
-      },
-    ],
-  };
+  this.cache = {};
 
   // list of valid commands
   this.validCommands = [

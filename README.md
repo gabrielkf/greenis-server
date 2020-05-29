@@ -85,7 +85,7 @@ Here are the same examples using Curl:
 - `curl -d "value=myvar&EX=true&seconds=10" -X PUT localhost:8080/set/mykey`
 - `curl -X GET localhost:8080/get/mykey`
 - `curl -d "score=42&member=mymember" -X PUT localhost:8080/zadd/myzset`
-- `curl -d "start=0&stop=-1" -X PUT localhost:8080/zrange/myzset`
+- `curl -d "start=0&stop=-1" -X GET localhost:8080/zrange/myzset`
 
 ## Observations
 
@@ -98,8 +98,13 @@ request, unlike Redis', which can take multiple.
 
 All responses are also space-delimited encoded strings, except
 for the ALL command, which returns a JSON object.
-
 Other than that, it should behave just like Redis.
+
+#### Work time
+
+I made an approximate registry of my work hours in this
+project as far as May 29, 2020, when I pushed it to
+Github. You can find it in the workSessions.txt file.
 
 For more information on the sintax for these commands,
 check [here](http://redis.io/commands)
