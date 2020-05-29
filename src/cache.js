@@ -62,106 +62,6 @@ function cacheFactory() {
     return ['pong', 200];
   };
 
-  //* GETTERS
-  // returns all values
-  const all = () => [this.cache, 200];
-
-  const get = key => {
-    if (typeof this.cache[key] === 'object') {
-      return [
-        'WRONGTYPE Operation against a key holding the wrong kind of value',
-        400,
-      ];
-    }
-
-    if (this.cache[key]) {
-      return [this.cache[key], 200];
-    }
-
-    return ['(nil)', 404];
-  };
-
-  const dbsize = () => {
-    let counter = 0;
-    const keys = Object.keys(this.cache);
-
-    for (let i = 0; i < keys.length; i += 1) {
-      if (typeof this.cache[keys[i]] === 'object') {
-        counter += this.cache[keys[i]].length;
-      } else {
-        counter += 1;
-      }
-    }
-
-    return [String(counter), 200];
-  };
-
-  const zcard = key => {
-    if (!this.cache[key]) {
-      return ['0', 404];
-    }
-
-    if (typeof this.cache[key] !== 'object') {
-      return [
-        'WRONGTYPE Operation against a key holding the wrong kind of value',
-        400,
-      ];
-    }
-
-    return [this.cache[key].length, 200];
-  };
-
-  const zrank = (key, member) => {
-    if (typeof this.cache[key] !== 'object') {
-      return [
-        'WRONGTYPE Operation against a key holding the wrong kind of value',
-        400,
-      ];
-    }
-
-    const memberIndex = this.cache[key].findIndex(
-      item => item.member === String(member)
-    );
-
-    if (!this.cache[key] || memberIndex === -1) {
-      return ['(nil)', String(404)];
-    }
-
-    return [memberIndex, String(200)];
-  };
-
-  const zrange = (key, start, stop) => {
-    if (isNaN(start) || isNaN(stop)) {
-      return ['ERR Range argument is not a number', 400];
-    }
-
-    if (!this.cache[key]) {
-      return [[], 404];
-    }
-
-    if (typeof this.cache[key] !== 'object') {
-      return [
-        'WRONGTYPE Operation against a key holding the wrong kind of value',
-        400,
-      ];
-    }
-
-    // get members
-    const members = this.cache[key].map(
-      item => item.member
-    );
-
-    // adapts indexes to make .slice bahave as zrange
-    const first =
-      start < 0 ? members.length + +start : +start;
-    const last =
-      stop < 0 ? members.length + +stop + 1 : +stop + 1;
-
-    const range = members.slice(first, last);
-
-    return [range, 200];
-  };
-
   //* SETTERS
   // SET key value [EX seconds]
   const set = (key, value, EX, seconds) => {
@@ -194,13 +94,15 @@ function cacheFactory() {
       return ['ERR Value is not a valid float', 400];
     }
 
+    // insterted member and current Z set
     const newMember = {
       score,
       member,
     };
     const oldZ = this.cache[key];
+
     // check if Z set exists and key is not assigned
-    if (oldZ === undefined) {
+    if (!oldZ) {
       this.cache[key] = [newMember];
       return ['1', 201];
     }
@@ -261,10 +163,115 @@ function cacheFactory() {
     return [String(this.cache[key]), 200];
   };
 
+  //* GETTERS
+  // returns all values
+  const all = () => [this.cache, 200];
+
+  const get = key => {
+    if (typeof this.cache[key] === 'object') {
+      return [
+        'WRONGTYPE Operation against a key holding the wrong kind of value',
+        400,
+      ];
+    }
+
+    if (this.cache[key]) {
+      return [this.cache[key], 200];
+    }
+
+    return ['(nil)', 404];
+  };
+
+  const dbsize = () => {
+    let counter = 0;
+    const keys = Object.keys(this.cache);
+
+    for (let i = 0; i < keys.length; i += 1) {
+      if (typeof this.cache[keys[i]] === 'object') {
+        counter += this.cache[keys[i]].length;
+      } else {
+        counter += 1;
+      }
+    }
+
+    return [String(counter), 200];
+  };
+
+  const zcard = key => {
+    if (!this.cache[key]) {
+      return ['0', 404];
+    }
+
+    if (typeof this.cache[key] !== 'object') {
+      return [
+        'WRONGTYPE Operation against a key holding the wrong kind of value',
+        400,
+      ];
+    }
+
+    return [String(this.cache[key].length), 200];
+  };
+
+  const zrank = (key, member) => {
+    if (typeof this.cache[key] !== 'object') {
+      return [
+        'WRONGTYPE Operation against a key holding the wrong kind of value',
+        400,
+      ];
+    }
+
+    const memberIndex = this.cache[key].findIndex(
+      item => item.member === String(member)
+    );
+
+    if (!this.cache[key] || memberIndex === -1) {
+      return ['(nil)', String(404)];
+    }
+
+    return [String(memberIndex), 200];
+  };
+
+  const zrange = (key, start, stop) => {
+    if (isNaN(start) || isNaN(stop)) {
+      return ['ERR Range argument is not a number', 400];
+    }
+
+    if (!this.cache[key]) {
+      return [[], 404];
+    }
+
+    if (typeof this.cache[key] !== 'object') {
+      return [
+        'WRONGTYPE Operation against a key holding the wrong kind of value',
+        400,
+      ];
+    }
+
+    // get members
+    const members = this.cache[key].map(
+      item => item.member
+    );
+
+    // adapts indexes to make .slice bahave as zrange
+    const first =
+      start < 0 ? members.length + +start : +start;
+    const last =
+      stop < 0 ? members.length + +stop + 1 : +stop + 1;
+
+    const range = members.slice(first, last);
+
+    return [range.toString().replace(/,/g, ' '), 200];
+  };
+
   //* DELETE
   const del = key => {
     if (!this.cache[key]) {
       return ['0', 404];
+    }
+
+    // checks if key refers to a Z set
+    if (typeof this.cache[key] === 'object') {
+      return ['0', 400];
     }
 
     delete this.cache[key];

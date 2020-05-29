@@ -21,6 +21,7 @@ routes.use('/', (req, res, next) => {
         .status(400)
         .send('ERR No command was input');
     }
+    // for some reason /dbsize route did not work
     if (req.url === '/dbsize') {
       const [response, status] = cache.dbsize();
       return res.status(status).send(response);
@@ -34,7 +35,9 @@ routes.use('/', (req, res, next) => {
 
   const instruction = req.query.cmd.split(' ');
   const cmd = String(instruction.slice(0, 1)).toLowerCase();
-  const args = instruction.slice(1);
+  const args = instruction
+    .slice(1)
+    .filter(item => item !== '');
 
   if (!cache.cmdIsValid(cmd)) {
     return res.status(405).send('ERR invalid command');
@@ -102,7 +105,7 @@ routes.get('/zcard/:key', (req, res) => {
   return res.status(status).send(String(response));
 });
 
-//* ZRANK
+//* ZRANK key member
 routes.get('/zrank/:key', (req, res) => {
   const { key } = req.params;
   const { member } = req.body;
